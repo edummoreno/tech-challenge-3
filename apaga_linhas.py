@@ -27,19 +27,18 @@ def processa_arquivo(caminho_entrada, caminho_saida):
                     
                     linhas_descartadas += 1
                 else:
-                    # --- ETAPA FINAL DE TRANSFORMAÇÃO ---
                     
-                    # 1. Criamos um novo dicionário apenas com as chaves desejadas.
+                    # 1. novo dicionário apenas com as chaves desejadas.
                     novo_objeto = {
                         "title": title_limpo,
                         "content": content_limpo
                     }
                     
-                    # 2. Convertemos este novo dicionário Python de volta para uma string JSON.
+                    # 2. novo dicionário Python de volta para uma string JSON.
                     #    O ensure_ascii=False é MUITO importante para manter acentos e caracteres especiais.
                     nova_linha_json = json.dumps(novo_objeto, ensure_ascii=False)
                     
-                    # 3. Escrevemos a nova linha no arquivo de saída, adicionando a quebra de linha '\n'
+                    # 3. nova linha no arquivo de saída, adicionando a quebra de linha '\n'
                     #    para manter o formato JSON Lines.
                     outfile.write(nova_linha_json + '\n')
                     
@@ -54,7 +53,6 @@ def processa_arquivo(caminho_entrada, caminho_saida):
     except Exception as e:
         print(f"Ocorreu um erro: {e}")
 
-# O if __name__ == "__main__": continua o mesmo...
 if __name__ == "__main__":
     exemplo_uso = """
 Exemplo de uso:

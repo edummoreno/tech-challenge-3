@@ -5,11 +5,16 @@
 
 - [hunggingface](https://huggingface.co/)
 - [gemma-3-4b-it](https://huggingface.co/google/gemma-3-4b-it)
+- [modulo gguf quantizado](https://huggingface.co/ggml-org/gemma-3-4b-it-GGUF)
+
+- utilizamos o gemma-3-4b-it-Q8_0.gguf
 
 ## Datasets
 
 ### Correção e Limpeza de Dados.
-- 1 install requirements.txt
-- 2 executar jq. para verificar erros de json
-- 3 executar corrige_dados.py para corrigir json
-- 4 executar limpa_dados.py
+
+#### pre limpeza
+- normaliza_dado.py
+
+#### apaga linhas desnecessarias.
+- apaga_linhas.py

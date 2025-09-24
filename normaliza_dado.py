@@ -100,4 +100,4 @@ if __name__ == "__main__":
     else:
         nome_base, extensao = os.path.splitext(arquivo_entrada)
         arquivo_saida = f"{nome_base}_1{extensao}"
-    processa_arquivo(arquivo_entrada, arquivo_said
+    processa_arquivo(arquivo_entrada, arquivo_saida)
