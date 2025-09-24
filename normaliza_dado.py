@@ -99,5 +99,5 @@ if __name__ == "__main__":
         arquivo_saida = args.output
     else:
         nome_base, extensao = os.path.splitext(arquivo_entrada)
-        arquivo_saida = f"{nome_base}_resgatado{extensao}"
-    processa_arquivo(arquivo_entrada, arquivo_saida)
+        arquivo_saida = f"{nome_base}_1{extensao}"
+    processa_arquivo(arquivo_entrada, arquivo_said

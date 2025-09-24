@@ -5,33 +5,56 @@ import os
 
 def processa_arquivo(caminho_entrada, caminho_saida):
 
-    print("INFO: Lendo e validando o arquivo de entrada...")
+    print(f"INFO: Lendo, filtrando e formatando o arquivo: {caminho_entrada}...")
     try:
         with open(caminho_entrada, 'r', encoding='utf-8') as infile, \
-            open(caminho_saida, 'w', encoding='utf-8') as outfile:
+             open(caminho_saida, 'w', encoding='utf-8') as outfile:
     
+            CONTEUDO_INVALIDO = ['\\', '"']
             linhas_mantidas = 0
             linhas_descartadas = 0
 
-            ###so mantem linhas que title e content tem conteudo.
             for line in infile:
                 data = json.loads(line)
-                if not data.get('title') or not data.get('content'):
 
+                title_limpo = (data.get('title') or "").strip()
+                content_limpo = (data.get('content') or "").strip()
+
+                if (not title_limpo or
+                    not content_limpo or
+                    title_limpo in CONTEUDO_INVALIDO or
+                    content_limpo in CONTEUDO_INVALIDO):
+                    
                     linhas_descartadas += 1
                 else:
-                    outfile.write(line)
+                    # --- ETAPA FINAL DE TRANSFORMAÇÃO ---
+                    
+                    # 1. Criamos um novo dicionário apenas com as chaves desejadas.
+                    novo_objeto = {
+                        "title": title_limpo,
+                        "content": content_limpo
+                    }
+                    
+                    # 2. Convertemos este novo dicionário Python de volta para uma string JSON.
+                    #    O ensure_ascii=False é MUITO importante para manter acentos e caracteres especiais.
+                    nova_linha_json = json.dumps(novo_objeto, ensure_ascii=False)
+                    
+                    # 3. Escrevemos a nova linha no arquivo de saída, adicionando a quebra de linha '\n'
+                    #    para manter o formato JSON Lines.
+                    outfile.write(nova_linha_json + '\n')
+                    
                     linhas_mantidas += 1
 
-        print("Concluido")
-        print(f"{linhas_mantidas} linhas mantidas e {linhas_descartadas} linhas descartadas")
+            print("\nConcluído!")
+            print(f"{linhas_mantidas} linhas mantidas e formatadas. {linhas_descartadas} linhas descartadas.")
+            print(f"Arquivo final para fine-tuning salvo em: {caminho_saida}")
 
     except FileNotFoundError:
-        print(f"{arquivo_entrada} não encontrado")
+        print(f"Erro: O arquivo '{caminho_entrada}' não foi encontrado")
     except Exception as e:
-        print(f"Ocorreu um erro {e}")
+        print(f"Ocorreu um erro: {e}")
 
-
+# O if __name__ == "__main__": continua o mesmo...
 if __name__ == "__main__":
     exemplo_uso = """
 Exemplo de uso:
