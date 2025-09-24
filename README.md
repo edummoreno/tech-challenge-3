@@ -1,20 +1,3 @@
-# tech-challenge-3
-
-
-
-
-- utilizamos o gemma-3-4b-it-Q8_0.gguf
-
-## Datasets
-
-### Correção e Limpeza de Dados.
-
-#### pre limpeza
-- normaliza_dado.py
-
-#### apaga linhas desnecessarias.
-- apaga_linhas.py
-
 # Tech Challenge FASE 03: Fine-Tuning do Gemma para Perguntas e Respostas de Produtos
 
 ## 🎯 Objetivo do Projeto
