@@ -10,43 +10,45 @@ from trl import SFTTrainer
 # ---------------------------------
 
 # O nome do modelo que vamos usar. Unsloth tem versões otimizadas.
-model_name = "unsloth/gemma-2b-it.gguf" 
+model_name = "unsloth/gemma-2b-it" 
 # Caminho para o nosso dataset formatado
-dataset_path = "data/dataset_formatado_para_treino.json"
+dataset_path = "../data/dataset_formatado_para_treino.json"
 # Onde vamos salvar nosso modelo treinado (os adaptadores LoRA)
 output_dir = "LLM/gemma-2b-amazon-titles"
 
 # ETAPA 2: CARREGAR O MODELO E TOKENIZER
-# -----------------------------------------
-# Aqui a mágica do Unsloth acontece. Ele vai carregar o modelo de
-# forma muito mais rápida e com uso de memória reduzido.
 print("Carregando o modelo...")
 model, tokenizer = FastLanguageModel.from_pretrained(
     model_name = model_name,
-    max_seq_length = 2048, # Define o tamanho máximo da sequência/prompt
-    dtype = None,           # Deixa o Unsloth decidir o melhor tipo de dado
-    load_in_4bit = True,    # Força o carregamento em 4-bit (quantização!)
+    max_seq_length = 2048,
+    dtype = None,
+    load_in_4bit = True,
 )
 print("Modelo carregado com sucesso!")
 
+# <<< patch para GPUs antigas (GTX 1050) >>>
+try:
+    # Algumas builds expõem aqui (GitHub)
+    from cut_cross_entropy.transformers import cce_patch
+except ImportError:
+    # PyPI expõe no top-level
+    from cut_cross_entropy import cce_patch
+
+cce_patch("gemma", impl="torch_compile")
+print("CCE patch aplicado (torch_compile).")
 
 # ETAPA 3: CONFIGURAR O MODELO PARA TREINAMENTO (LoRA)
-# ----------------------------------------------------
-# Aqui adicionamos os "adaptadores" LoRA ao modelo.
-# Apenas esses pequenos adaptadores serão treinados.
 print("Configurando o modelo para o treinamento com LoRA...")
 model = FastLanguageModel.get_peft_model(
     model,
-    r = 16, # Rank da adaptação. Valores comuns são 8, 16, 32.
-    lora_alpha = 16, # Alpha. Geralmente igual a 'r'.
-    lora_dropout = 0, # Probabilidade de dropout para regularização.
-    bias = "none", # Tipo de bias. 'none' é comum.
-    use_gradient_checkpointing = True, # Técnica para economizar mais memória.
-    random_state = 3407, # Semente para reprodutibilidade.
-    target_modules = ["q_proj", "k_proj", "v_proj", "o_proj",
-                      "gate_proj", "up_proj", "down_proj"],
+    r = 16,
+    lora_alpha = 16,
+    lora_dropout = 0,
+    bias = "none",
+    use_gradient_checkpointing = True,
+    random_state = 3407,
+    target_modules = ["q_proj","k_proj","v_proj","o_proj","gate_proj","up_proj","down_proj"],
 )
-print("Modelo configurado para LoRA!")
 
 
 # ETAPA 4: CARREGAR O DATASET
@@ -61,8 +63,8 @@ print("Dataset carregado!")
 # Estes são os hiperparâmetros do nosso treinamento.
 # Foram escolhidos para MAXIMIZAR a chance de caber em 4GB VRAM.
 training_args = TrainingArguments(
-    per_device_train_batch_size = 2, # !! MUITO IMPORTANTE para VRAM baixa.
-    gradient_accumulation_steps = 4, # Simula um batch size maior (2*4=8) sem usar mais VRAM.
+    per_device_train_batch_size = 1, # !! MUITO IMPORTANTE para VRAM baixa.
+    gradient_accumulation_steps = 8, # Simula um batch size maior (2*4=8) sem usar mais VRAM.
     warmup_steps = 5, # Número de passos para aquecer o learning rate.
     max_steps = 60, # Número máximo de passos de treinamento. Comece com pouco para testar. Aumente depois.
     learning_rate = 2e-4, # Taxa de aprendizado.
@@ -83,8 +85,8 @@ trainer = SFTTrainer(
     tokenizer = tokenizer,
     train_dataset = dataset,
     dataset_text_field = "text", # A coluna do nosso dataset que tem o prompt formatado.
-    max_seq_length = 2048,
-    dataset_num_proc = 2,
+    max_seq_length = 1048,
+    dataset_num_proc = 0,
     packing = False, # Manter False para datasets de instrução.
     args = training_args,
 )
