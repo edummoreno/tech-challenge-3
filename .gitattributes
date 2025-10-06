@@ -1,0 +1,5 @@
+# Adiciona o arquivo de configuração do LFS
+git add .gitattributes
+
+# Cria um commit para salvar essa configuração
+git commit -m "Configura Git LFS para rastrear arquivos .zip"
