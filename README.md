@@ -1,142 +1,120 @@
-# 🧠 Tech Challenge FASE 03: Fine-Tuning do Gemma/TinyLlama para Perguntas e Respostas de Produtos
+# Tech Challenge — Fine‑tuning TinyLlama com LoRA (QLoRA)
 
-## 🎯 Objetivo do Projeto
+Repositório do **Tech Challenge** para treinar o modelo [`TinyLlama/TinyLlama_v1.1`](https://huggingface.co/TinyLlama/TinyLlama_v1.1) a gerar **descrições de produtos** a partir de títulos. O pipeline roda em **Google Colab**, com **QLoRA (4‑bit)**, **pré‑tokenização**, **constant‑length packing** e **checkpoints versionados** por execução.
 
-Este projeto realiza o fine-tuning de um modelo de linguagem (LLM) para atuar como um especialista em produtos da Amazon.
-O modelo foi treinado para receber o título de um produto e gerar uma descrição detalhada e criativa, com base no dataset "The Amazon Titles-1.3MM".
+> **Demo**: vídeo de apresentação (**adicione o link aqui**).
 
-O foco do desafio é demonstrar a capacidade de adaptar um modelo de linguagem pré-treinado (como o TinyLlama ou Gemma) para um domínio específico de e-commerce, otimizando custo e performance usando LoRA + QLoRA (quantização 4-bit).
+---
 
-## 🛠️ Tecnologias e Modelos Utilizados
+## Visão geral
 
-- **Modelo Base:** [TinyLlama/TinyLlama_v1.1](https://huggingface.co/TinyLlama/TinyLlama_v1.1)
-- **Alternativa Gemma:** [gemma-3-4b-it](https://huggingface.co/google/gemma-3-4b-it)
-- **Dataset:** The Amazon Titles-1.3MM (`trn.json`)
-- **Bibliotecas Principais:**
-  - transformers
-  - trl
-  - peft
-  - bitsandbytes
-  - datasets
-  - accelerate
-  - sentencepiece
-- **Ambiente de Treinamento:** Google Colab Pro (GPU A100)
+- **Base**: TinyLlama 1.1 (1.1B) carregado em 4‑bit via `bitsandbytes`.
+- **Adaptação**: LoRA nas projeções de atenção e camadas MLP.
+- **Dados**: `dataset_formatado_para_treino.json` (texto já no formato *instruct* com tags como `<start_of_turn>user` / `<end_of_turn>`).
+- **Treino**: 1 época, `MAX_LEN=128`, *batch* efetivo 64 (8 × 8), *gradient checkpointing*, TF32.
+- **Logs/artefatos**: CSV, JSON de histórico, *timing* e curva `loss x step`.
 
-## 📚 LLM Models e Referências
+---
 
-- [Hugging Face Hub](https://huggingface.co/)
-- [TinyLlama v1.1](https://huggingface.co/TinyLlama/TinyLlama_v1.1)
-- [Gemma 3 4B IT](https://huggingface.co/google/gemma-3-4b-it)
-- [Versão Quantizada GGUF](https://huggingface.co/ggml-org/gemma-3-4b-it-GGUF)
-
-## 📂 Estrutura do Repositório
+## Estrutura do repositório
 
 ```
-tech-challenge-3/
-├── data/
-│   ├── trn.json                           # Dataset original
-│   ├── dataset_formatado_para_treino.json # Dataset já formatado para SFT
-├── LLM/
-│   ├── ft-output/             # Checkpoints do treinamento (retomada automática)
-│   └── tinyllama-lora/        # Adapters LoRA salvos
-├── notebooks/
-│   └── tech_challenge_3.ipynb # Notebook principal (Google Colab)
-├── README.md
-├── .gitignore
-└── tree.txt
+.
+├─ data/
+│  └─ dataset_formatado_para_treino.json     # (não subir o arquivo grande)
+├─ LLM/
+│  ├─ ft-output/                             # saídas versionadas por execução (RUN_NAME)
+│  │  └─ run-AAAAmmdd-HHMMSS-<tag>/
+│  │     ├─ lora_checkpoints/                # checkpoints parciais do adapter
+│  │     ├─ train_log.csv
+│  │     ├─ training_history.json
+│  │     ├─ timing.json
+│  │     └─ train_curve.png
+│  └─ tinyllama-lora/
+│     └─ lora-final-AAAAmmdd-HHMMSS/         # adapter final + tokenizer
+│         ├─ adapter_model.safetensors
+│         ├─ adapter_config.json
+│         ├─ tokenizer.json / tokenizer.model / tokenizer_config.json
+│         └─ README.md
+├─ tech_challenge_3.ipynb                     # notebook principal (Colab)
+├─ tech_challenge_3.py                        # (opcional) export do notebook
+└─ README.md
 ```
 
-## 🚀 Como Executar
+> Dica: mantenha `data/` fora do git ou use `.gitignore`. Se quiser preservar a estrutura vazia, crie arquivos `.gitkeep` em `LLM/ft-output/` e `LLM/tinyllama-lora/`.
 
-O treinamento completo foi implementado no notebook `notebooks/tech_challenge_3.ipynb`.
-Para reproduzir o projeto, basta abrir o notebook no Google Colab e seguir as células na ordem.
+---
 
-### 🔹 Etapas Principais
+## Reproduzindo no Colab (passo a passo)
 
-1. **Montar o Google Drive**
-   ```python
-   from google.colab import drive
-   drive.mount('/content/drive')
-   ```
-
-2. **Instalar dependências**
+1. **Abra o notebook** `tech_challenge_3.ipynb` no Colab com GPU ativada.
+2. Execute as células **na ordem**:
+   - **Célula 2–4**: montagem do Drive e *load* do dataset (com cópia para `/tmp` para I/O mais rápido).
+   - **Célula 7**: define `MODEL_ID` e `MAX_LEN`, e utilitário `get_tokenizer()`.
+   - **Célula 9**: configura *cache* Hugging Face (`HF_HOME`, etc.).
+   - **Célula 10**: **treino** com QLoRA + packing + callbacks.
+   - **Célula 11**: **inferência comparativa** (baseline x LoRA) com prompts compatíveis.
+   - **Célula 12**: estatísticas e **gráfico loss x step**.
+3. (Opcional) Antes da Célula 10, defina uma *tag* para versionar a saída:
    ```bash
-   pip install -q -U \
-   "transformers>=4.38" \
-   "trl>=0.8.0" \
-   "peft>=0.9.0" \
-   "bitsandbytes>=0.41" \
-   "datasets" \
-   "accelerate>=0.28" \
-   "sentencepiece" \
-   "pyarrow<20.0"
+   %env RUN_TAG=video
    ```
+   O diretório do run será `LLM/ft-output/run-AAAAmmdd-HHMMSS-video/`.
 
-3. **Login no Hugging Face**
-   ```python
-   from huggingface_hub import login
-   login()  # Insira seu token HF
-   ```
+### Dependências principais (instaladas no Colab)
+- `torch 2.8.0+cu128`, `transformers`, `trl 0.8.0`, `peft 0.9.0`, `bitsandbytes 0.48.1`, `datasets`, `pandas`, `matplotlib`.
 
-4. **Executar o Fine-tuning**
-   O notebook já contém o pipeline completo de:
-   - carregamento do modelo,
-   - formatação do dataset,
-   - treinamento com LoRA + QLoRA,
-   - salvamento automático de checkpoints.
+---
 
-5. **Salvar o modelo**
-   Após o treinamento, os adapters LoRA e o tokenizer são salvos em:
-   ```
-   /LLM/tinyllama-lora/
-   ```
+## Como funciona o treino (Célula 10)
 
-## 💾 Checkpoints e Retomada
+- **Quantização 4‑bit (QLoRA)**: `BitsAndBytesConfig(load_in_4bit=True, quant_type="nf4")`.
+- **LoRA**: `r=16`, `lora_alpha=16`, `lora_dropout=0.05`, *targets* `["q_proj","k_proj","v_proj","o_proj","gate_proj","up_proj","down_proj"]`.
+- **Pré‑tokenização**: converte `text → input_ids/attention_mask/labels`, depois **packing** concatena exemplos com `EOS` e fatia em blocos fixos (`MAX_LEN`).
+- **Desempenho**: *DataLoader* com `persistent_workers=True`, `prefetch_factor` configurável e `num_workers` baseado em CPU.
+- **Checkpoints & logs**: salvos automaticamente em `LLM/ft-output/run-.../` (diretório único por execução). O adapter final é salvo em `LLM/tinyllama-lora/lora-final-.../` junto com o **tokenizer** para garantir compatibilidade.
 
-O script identifica automaticamente o último checkpoint salvo no diretório de saída e retoma o treino de onde parou.
-Ideal para casos de interrupção do Colab.
+---
 
-## 🧪 Avaliação
+## Inferência (Célula 11)
 
-### Exemplo de Prompt:
-```
-Gere uma descrição criativa para o produto:
-Título: Girls Ballet Tutu Neon Pink
-```
+A célula carrega:
+- **Baseline** (TinyLlama original), com um prompt **limpo** para português.
+- **Modelo afinado (LoRA)**, com o prompt no **formato das tags** usadas no treino (`<start_of_turn>user/.../<start_of_turn>model`).
 
-**Saída (Baseline):**
-> Um vestido simples rosa para meninas.
+Parâmetros de geração sugeridos: `temperature=0.7`, `top_p=0.9`, `repetition_penalty=1.1`, e `eos_token_id` incluindo `</s>` e `<end_of_turn>` para **parar no fim do turno**.
 
-**Saída (Modelo Fine-tunado):**
-> Um tutu rosa neon encantador, perfeito para pequenas bailarinas brilharem nos palcos e ensaios.
+---
 
-## 📊 Hiperparâmetros Principais
+## Resultados do run de referência
 
-| Parâmetro | Valor | Descrição |
-|------------|--------|------------|
-| `learning_rate` | 2e-4 | Taxa de aprendizado |
-| `batch_size` | 1 | Tamanho do batch |
-| `gradient_accumulation_steps` | 8 | Acúmulo de gradientes |
-| `max_seq_length` | 256 | Tokens por exemplo |
-| `num_train_epochs` | 1 | Quantas vezes percorre o dataset |
-| `packing` | True | Junta exemplos até o limite de tokens |
-| `save_steps` | 2000 | Checkpoints periódicos |
+- **Dados de treino (packed)**: ~102.6k exemplos  
+- **Steps/época**: ~1603 — **tempo total** ≈ 90 min, **≈ 3.37 s/step**  
+- **Training loss final** ≈ **1.57**  
+- Curva disponível em: `LLM/ft-output/<run>/train_curve.png`
 
-## 📈 Resultados e Conclusões
+> Observação: a melhoria qualitativa é **sutil** com 1 época e `MAX_LEN=128`. Ganhos adicionais tendem a vir com **mais épocas**, **contexto maior** e prompt de inferência mais guiado.
 
-✅ O modelo aprendeu a gerar descrições mais criativas e ricas em contexto.  
-✅ O uso de QLoRA (4-bit) reduziu o consumo de memória sem perda perceptível de qualidade.  
-✅ O packing=True acelerou o treinamento em cerca de 30%.  
-✅ O training loss foi decrescendo gradualmente, indicando aprendizado estável.  
-✅ Os checkpoints automáticos garantiram retomada segura após quedas do Colab.
+---
 
-## 📹 Vídeo Explicativo
+## Dicas / Próximos passos
 
-🎥 (Adicionar link do vídeo explicativo do projeto no YouTube quando disponível.)
+- Aumentar `MAX_LEN` para 256/512 se houver VRAM e dados longos.
+- Experimentar **2–3 épocas** e *early stopping*.
+- Usar **SFTTrainer + DataCollatorForCompletionOnlyLM** se quiser treinar **apenas a parte de “resposta”** sem o *prefixo* do prompt.
+- Explorar *temperature* menor (0.3–0.5) para saídas mais factuais.
 
-## 👨‍💻 Autor
+---
 
-**Seu Nome**  
-Desenvolvedor | IA & Machine Learning  
-📧 [seuemail@exemplo.com](mailto:seuemail@exemplo.com)  
-🔗 [LinkedIn](https://linkedin.com/in/seu-perfil) | [GitHub](https://github.com/seu-usuario)
+## Licenças e créditos
+
+- Modelo **TinyLlama**: ver licença no repositório do Hugging Face.
+- Este projeto usa **Hugging Face Transformers**, **TRL**, **PEFT** e **datasets**.
+
+---
+
+## Contato
+
+- Autor: *Eduardo Moreno*  
+- Repositório: https://github.com/edummoreno/tech-challenge-3  
+- Vídeo: *(adicione o link assim que publicado)*
