@@ -114,7 +114,6 @@ Parâmetros de geração sugeridos: `temperature=0.7`, `top_p=0.9`, `repetition_
 ---
 
 ## Contato
-
-- Autor: *Eduardo Moreno*  
+ 
 - Repositório: https://github.com/edummoreno/tech-challenge-3  
-- Vídeo: *(adicione o link assim que publicado)*
+- Vídeo: https://youtu.be/JSF35VLg_QI 
